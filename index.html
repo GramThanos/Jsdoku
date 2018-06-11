@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Jsdoku</title>
+	<meta name="description" content="Javascript Sudoku Game">
+	<meta name="author" content="GramThanos">
+
+	<!-- JsDoku -->
+	<script type="text/javascript" src="jsdoku.min.js"></script>
+	<!-- JsDoku View -->
+	<link rel="stylesheet" type="text/css" href="jsdoku.view.css">
+	<script type="text/javascript" src="jsdoku.view.min.js"></script>
+
+	<!-- sAnim -->
+	<script type="text/javascript" src="sAnim.js"></script>
+	<!-- Page Style -->
+	<link rel="stylesheet" type="text/css" href="game.css">
+</head>
+<body>
+	<!-- Game Screens -->
+	<div id="wrapper-start" class="screen">
+		<div class="title">JsDoku</div>
+		<div class="subtitle">
+			<span id="super-easy">[ Super Easy ]</span>
+			<span id="easy">[ Easy ]</span>
+			<span id="medium">[ Medium ]</span>
+			<span id="hard">[ Hard ]</span>
+		</div>
+	</div>
+	<div id="wrapper-end" class="screen" style="display: none;">
+		<div class="title">JsDoku</div>
+		<div class="subtitle">
+			<span id="new-game">[ New Game ]</span>
+		</div>
+		<div class="info">
+			<div><span id="score-level"></span> | Score info</div>
+			<div>Best time: <span id="score-best"></span></div>
+			<div>Your time: <span id="score-current"></span></div>
+		</div>
+	</div>
+	<div id="wrapper-wait" class="screen" style="display: none;">
+		<div class="title"></div>
+	</div>
+	<div id="version"></div>
+	<div id="copyright">
+		Copyright &copy; <script type="text/javascript">document.write(new Date().getFullYear());</script> Grammatopoulos Athanasios-Vasileios.
+	</div>
+
+	<!-- Game Playground -->
+	<div id="wrapper-game">
+		<div id="wrapper-sudoku"></div>
+		<div id="wrapper-keys"></div>
+		<div id="wrapper-timer"></div>
+	</div>
+
+	<script type="text/javascript">
+
+		// Show version
+		document.getElementById('version').innerHTML = 'Jsdoku ' + Jsdoku.version + ' | ' + 'JsdokuView ' + JsdokuView.version;
+
+		// Get Wrappers
+		var wrapper_game = document.getElementById('wrapper-game');
+		var wrapper_soduku = document.getElementById('wrapper-sudoku');
+		var wrapper_keys = document.getElementById('wrapper-keys');
+		var wrapper_timer = document.getElementById('wrapper-timer');
+		var wrapper_game_start = document.getElementById('wrapper-start');
+		var wrapper_game_end = document.getElementById('wrapper-end');
+		var wrapper_game_wait = document.getElementById('wrapper-wait');
+		var wrapper_game_wait_txt = wrapper_game_wait.getElementsByTagName('div')[0];
+
+		var score_level = document.getElementById('score-level');
+		var score_best = document.getElementById('score-best');
+		var score_current = document.getElementById('score-current');
+
+		// Generate fake canvas
+		new JsdokuView(new Jsdoku(3, Jsdoku.level.SUPER_EASY), false, wrapper_soduku);
+
+		// Start the game
+		function gameStart (level) {
+			wrapper_game_start.style.opacity = 1;
+			wrapper_game.style.opacity = 1;
+
+			// Animate fade start screen
+			new sAnim({from : 1, to : 0, time: 250}, function(state) {
+				var opacity = Math.round(state*100)/100;
+				wrapper_game_start.style.opacity = opacity;
+				wrapper_game.style.opacity = opacity;
+			}, function() {
+				// Hide start screen
+				wrapper_game_start.style.display = 'none';
+				wrapper_game_start.style.opacity = 1;
+				// Show wait screen
+				wrapper_game_wait.style.display = 'block';
+				wrapper_game_wait.style.opacity = 0;
+				wrapper_game_wait_txt.innerHTML = 'Get Ready ...';
+
+				// Animate fade in start screen
+				new sAnim({from : 0, to : 1, time: 100}, function(state) {
+					wrapper_game_wait.style.opacity = Math.round(state*100)/100;
+				}, function() {
+
+					var s = new Date().getTime();
+					// Prepare game
+					createGame(level);
+					var delay = 1000 - (new Date().getTime() - s);
+					if (delay < 0) delay = 0;
+
+					setTimeout(function(){
+						wrapper_game_wait_txt.innerHTML = 'GO!';
+					}, delay + 0);
+
+					setTimeout(function(){
+						// Animate fade in start screen
+						new sAnim({from : 0, to : 1, time: 250}, function(state) {
+							var opacity = Math.round(state*100)/100;
+							wrapper_game.style.opacity = opacity;
+							wrapper_game_wait.style.opacity = 1 - opacity;
+						}, function() {
+							// Show game
+							wrapper_game.style.opacity = 1;
+							// Hide wait screen
+							wrapper_game_wait.style.display = 'none';
+							wrapper_game_wait.style.opacity = 1;
+
+							// Start Timer
+							game.time = new Date();
+							timerUpdate();
+						}).start();
+					}, delay + 750);
+				}).start();
+			}).start();
+		}
+
+		// Game data
+		var game = {time : null};
+
+		// Create game
+		var createGame = function (level) {
+			// Prepare game screen
+			wrapper_soduku.innerHTML = '';
+			wrapper_keys.innerHTML = '';
+
+			// Create sudoku
+			game.level = level;
+			game.sudoku = new Jsdoku(3, game.level);
+			game.view = new JsdokuView(game.sudoku, false, wrapper_soduku);
+			game.keys = new JsdokuView.Keys(game.view, wrapper_keys);
+
+			// Attach end event
+			game.view.onGameEnd(function (){
+				gameEnd();
+
+				wrapper_game_end.style.opacity = 0;
+				wrapper_game_end.style.display = 'block';
+				// Animate fade in end screen
+				new sAnim({from : 0, to : 1, time: 500}, function(state) {
+					wrapper_game_end.style.opacity = Math.round(state*100)/100;
+				}, function() {
+					// Show game
+					wrapper_game_end.style.opacity = 1;
+				}).start();
+			});
+
+			// Start Timer
+			game.time = new Date();
+			timerUpdate();
+		};
+
+		// End game
+		var gameEnd = function () {
+			game.took = new Date().getTime() - game.time.getTime();
+			game.time = null;
+
+			// Resolve level name
+			var level_name = '';
+			switch(game.level) {
+				case Jsdoku.level.SUPER_EASY: level_name = 'SUPER EASY';break;
+				case Jsdoku.level.EASY: level_name = 'EASY';break;
+				case Jsdoku.level.MEDIUM: level_name = 'MEDIUM';break;
+				case Jsdoku.level.HARD: level_name = 'HARD';break;
+				default: level_name = 'CUSTOM';break;
+			}
+
+			// Get best score
+			var new_best = false;
+			var best = localStorage.getItem('score@' + game.level);
+			if (!best) {
+				best = game.took;
+				new_best = true;
+			}
+			else {
+				best = parseInt(best, 10);
+			}
+			if (best > game.took) {
+				new_best = true;
+			}
+			if (new_best) {
+				localStorage.setItem('score@' + game.level, game.took);
+			}
+
+			// Show game end info
+			score_level.innerHTML = level_name;
+			score_best.innerHTML = timer_msToHMS(best);
+			score_current.innerHTML = timer_msToHMS(game.took);
+		};
+
+		// Timer
+		setInterval(function (){timerUpdate();}, 250);
+		function timerUpdate() {
+			if (game.time == null) {
+				wrapper_timer.innerHTML = '';
+				return;
+			}
+			var ms = new Date().getTime() - game.time.getTime();
+			wrapper_timer.innerHTML = timer_msToHMS(ms);
+		}
+		function timer_msToHMS(ms) {
+			var seconds = Math.floor(ms / 1000) % 60;
+			var minutes = Math.floor(ms / (1000*60)) % 60;
+			var hours   = Math.floor(ms / (1000*60*60));
+			return (hours + ':' + (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds);
+		}
+
+		// Attach game start events
+		document.getElementById('super-easy').addEventListener('click', function() {
+			gameStart(Jsdoku.level.SUPER_EASY);
+		}, false);
+		document.getElementById('easy').addEventListener('click', function() {
+			gameStart(Jsdoku.level.EASY);
+		}, false);
+		document.getElementById('medium').addEventListener('click', function() {
+			gameStart(Jsdoku.level.MEDIUM);
+		}, false);
+		document.getElementById('hard').addEventListener('click', function() {
+			gameStart(Jsdoku.level.HARD);
+		}, false);
+		document.getElementById('new-game').addEventListener('click', function() {
+			wrapper_game_start.style.display = 'block';
+			wrapper_game_end.style.display = 'none';
+		}, false);
+		
+	</script>
+</body>
+</html>
