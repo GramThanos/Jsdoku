@@ -23,7 +23,7 @@ var Jsdoku = (function(){
 	}
 
 	// Version
-	Jsdoku.version = 'v1.0.0-beta';
+	Jsdoku.version = 'v1.0.1-beta';
 
 	// Define the levels
 	Jsdoku.level = {
@@ -488,6 +488,7 @@ var Jsdoku = (function(){
 			SolveMethods.super_easy.lastEmptyCellBox.apply(this, [cell])
 		) {
 			this.stats.moves.super_easy++;
+			//console.log("super_easy move", cell, this.grid[cell.y][cell.x]);
 			return true;
 		}
 		if (this.level <= Jsdoku.level.SUPER_EASY) return false;
@@ -495,6 +496,7 @@ var Jsdoku = (function(){
 		// Easy
 		if (SolveMethods.easy.singleRowColumnBoxCandidate.apply(this, [cell])) {
 			this.stats.moves.easy++;
+			//console.log("easy move", cell, this.grid[cell.y][cell.x]);
 			return true;
 		}
 		if (this.level <= Jsdoku.level.EASY) return false;
@@ -502,6 +504,7 @@ var Jsdoku = (function(){
 		// Medium
 		if (SolveMethods.medium.singleCellBoxPossibleCandidate.apply(this, [cell])) {
 			this.stats.moves.medium++;
+			//console.log("medium move", cell, this.grid[cell.y][cell.x]);
 			return true;
 		}
 		if (this.level <= Jsdoku.level.MEDIUM) return false;
@@ -663,23 +666,27 @@ var Jsdoku = (function(){
 
 				var cell_candidates = this.keys.slice(0);
 				var x, y;
+				// Remove box keys from candidates
 				for (x = box_x; x < box_x + this.N; x++) {
 					for (y = box_y; y < box_y + this.N; y++) {
-						if(this.grid[y][x] != false){
+						if (this.grid[y][x] != false) {
 							cell_candidates.splice(cell_candidates.indexOf(this.grid[y][x]), 1);
 						}
 					}
 				}
 				
+				var i;
 				var pos;
 				var candidates;
 				for (x = box_x; x < box_x + this.N; x++) {
 					if (x != cell.x) {
 						candidates = this.getColumnCandidates(x);
-						for (i = 0; i < candidates.length; i++) {
-							pos = cell_candidates.indexOf(candidates[i]);
-							if (pos != -1){
-								cell_candidates.splice(pos, 1);
+						if (candidates.length == 0) {
+							for (i = 0; i < candidates.length; i++) {
+								pos = cell_candidates.indexOf(candidates[i]);
+								if (pos != -1){
+									cell_candidates.splice(pos, 1);
+								}
 							}
 						}
 					}
@@ -691,11 +698,13 @@ var Jsdoku = (function(){
 
 				for (y = box_y; y < box_y + this.N; y++) {
 					if (y != cell.y) {
-						candidates = this.getColumnCandidates(y);
-						for (var i = 0; i < candidates.length; i++) {
-							pos = cell_candidates.indexOf(candidates[i]);
-							if (pos != -1){
-								cell_candidates.splice(pos, 1);
+						candidates = this.getRowCandidates(y);
+						if (candidates.length == 0) {
+							for (i = 0; i < candidates.length; i++) {
+								pos = cell_candidates.indexOf(candidates[i]);
+								if (pos != -1){
+									cell_candidates.splice(pos, 1);
+								}
 							}
 						}
 					}
